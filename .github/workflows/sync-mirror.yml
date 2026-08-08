@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   schedule:
-    # 每6小时自动同步，按需调整 cron
+    # 每6小时自动同步，可以自行修改 cron
     - cron: '0 */6 * * *'
   workflow_dispatch: # 支持手动点击运行
 
@@ -33,30 +33,13 @@ jobs:
           echo "oi-wiki.xqyhcc.qzz.io" > CNAME
 
       - name: 生成SPA路由兜底404.html（修复子页面刷新白屏）
-        run: |
-          cat > 404.html << 'EOF'
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<title>OI Wiki</title>
-<script>
-(function(){
-  var loc = window.location;
-  var target = loc.protocol + "//" + loc.host + "/?" + loc.pathname.slice(1) + loc.search + loc.hash;
-  loc.replace(target);
-})();
-</script>
-</head>
-<body></body>
-</html>
-EOF
+        run: echo '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>OI Wiki</title><script>(function(){var loc=window.location;var target=loc.protocol+"//"+loc.host+"/?"+loc.pathname.slice(1)+loc.search+loc.hash;loc.replace(target);})();</script></head><body></body></html>' > 404.html
 
       - name: 页面自动修复脚本
         run: |
-          # Google Fonts → loli 国内镜像
+          # Google Fonts 替换为 loli 国内镜像
           find . -type f -name "*.html" | xargs sed -i 's|fonts.googleapis.com|fonts.loli.net|g'
-          # 删除反馈系统，根除大量CORS异常
+          # 删除反馈系统脚本，根除大量CORS异常
           find . -type f -name "*.html" | xargs sed -i '/oiwiki-feedback-sys-frontend.js/d'
 
       - name: 提交更新
