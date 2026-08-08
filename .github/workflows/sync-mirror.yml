@@ -18,7 +18,7 @@ jobs:
       - name: Setup upstream remote
         run: |
           git remote remove upstream || true
-          git remote add upstream https://github.com/OI-wiki/OI-wiki.git
+          git remote add upstream https://github.com/OI-wiki/OI-wiki/OI-wiki.git
           git fetch upstream
       - name: Sync upstream gh-pages to gh-pages
         run: |
