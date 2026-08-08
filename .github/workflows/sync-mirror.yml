@@ -23,12 +23,13 @@ jobs:
           git remote remove upstream || true
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
+          git fetch origin
 
       # ========== 同步1：上游 gh-pages → 本地 gh-pages（网站静态页面）
       - name: Sync upstream/gh-pages -> origin/gh-pages
         run: |
-          git checkout gh-pages
-          git reset --hard upstream/gh-pages
+          # 直接重置，不使用checkout切换规避分支名称歧义
+          git switch -C gh-pages upstream/gh-pages
           # 清理上游自带.github 规避workflow推送权限报错
           rm -rf .github
           # 恢复自定义域名CNAME
@@ -39,8 +40,7 @@ jobs:
       # ========== 同步2：上游 master → 本地 source（OI-Wiki Markdown源码）
       - name: Sync upstream/master -> origin/source
         run: |
-          # 如果不存在source分支则新建
-          git checkout -B source upstream/master
+          git switch -C source upstream/master
           git add .
           git commit -m "Auto sync source code from upstream master" || echo "No source changes"
 
