@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   schedule:
-    # 每 6 小时自动同步，可以自行修改 cron
+    # 每6小时自动同步，按需调整
     - cron: '0 */6 * * *'
   workflow_dispatch: # 支持手动点击运行
 
@@ -22,34 +22,24 @@ jobs:
           git config --global user.name "Mirror Bot"
           git config --global user.email "mirror@example.com"
 
-      - name: 预先备份 CNAME 文件
-        run: |
-          if [ -f CNAME ]; then
-            cp CNAME /tmp/custom_cname_backup
-          fi
-
       - name: 拉取上游 OI-Wiki gh-pages
         run: |
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream gh-pages
           git reset --hard upstream/gh-pages
 
-      - name: 恢复 CNAME（保证自定义域名不丢失）
+      # ==========【关键：强制写入CNAME，永不丢失】==========
+      - name: 强制写入自定义域名 CNAME
         run: |
-          if [ -f /tmp/custom_cname_backup ]; then
-            cp /tmp/custom_cname_backup CNAME
-          else
-            # 如果备份不存在，主动生成你的域名CNAME
-            echo "oi-wiki.xqyhcc.qzz.io" > CNAME
-          fi
+          echo "oi-wiki.xqyhcc.qzz.io" > CNAME
 
       - name: 自动修复页面资源链接 & 移除报错反馈组件
         run: |
-          # 替换谷歌字体域名 → loli 国内镜像
+          # 替换谷歌字体域名 → loli 国内镜像，解决字体加载超时
           find . -type f -name "*.html" | xargs sed -i 's|fonts.googleapis.com|fonts.loli.net|g'
-          # 删除反馈系统脚本引入，消除持续CORS异常
+          # 删除反馈系统JS引入，根除大量CORS报错阻塞主线程（侧边栏消失元凶）
           find . -type f -name "*.html" | xargs sed -i '/oiwiki-feedback-sys-frontend.js/d'
-          # 可选：移除谷歌统计（取消下面注释启用）
+          # 可选：移除谷歌统计（启用取消下面注释）
           # find . -type f -name "*.html" | xargs sed -i '/www.google-analytics.com/d'
 
       - name: 提交更新
