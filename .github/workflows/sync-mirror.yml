@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
+  # 同步官方静态网站到 gh-pages 分支（GitHub Pages 对外访问）
   sync_website:
     runs-on: ubuntu-latest
     permissions:
@@ -15,36 +16,45 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup upstream remote
+
+      - name: 添加上游仓库
         run: |
           git remote remove upstream || true
-          git remote add upstream https://github.com/OI-wiki/OI-wiki/OI-wiki.git
+          git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
-      - name: Sync upstream gh-pages to gh-pages
+
+      - name: 同步官方 gh-pages 静态网站
         run: |
           git switch -C gh-pages upstream/gh-pages
+          # 删除上游自带的工作流目录，规避推送权限报错
           rm -rf .github
-          echo "oi-wiki.xqyhcc.qzz.io" > CNAME
+          # 写入你的自定义域名
+          echo "shturl.cc/9NAJfXFA9RF" > CNAME
+          # 自动生成路由规则，解决子页面404
+          echo "/*    /index.html   200" > _redirects
           git add .
-          git commit -m "Sync official static site" || true
+          git commit -m "Auto sync official static site" || true
           git push origin gh-pages --force
 
+  # 同步官方源码（master）到 source 分支备份
   sync_source_backup:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout @v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup upstream remote
+
+      - name: 添加上游仓库
         run: |
           git remote remove upstream || true
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
-      - name: Sync upstream master to source branch
+
+      - name: 同步官方 master 源码到 source 分支
         run: |
           git switch -C source upstream/master
           git add .
-          git commit -m "Backup OI-Wiki markdown source" || true
+          git commit -m "Auto backup source code" || true
           git push origin source --force
