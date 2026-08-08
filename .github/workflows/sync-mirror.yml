@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   schedule:
-    # 每6小时自动同步，按需调整
+    # 每6小时自动同步，按需调整 cron
     - cron: '0 */6 * * *'
   workflow_dispatch: # 支持手动点击运行
 
@@ -28,24 +28,41 @@ jobs:
           git fetch upstream gh-pages
           git reset --hard upstream/gh-pages
 
-      # ==========【关键：强制写入CNAME，永不丢失】==========
       - name: 强制写入自定义域名 CNAME
         run: |
           echo "oi-wiki.xqyhcc.qzz.io" > CNAME
 
-      - name: 自动修复页面资源链接 & 移除报错反馈组件
+      - name: 生成SPA路由兜底404.html（修复子页面刷新白屏）
         run: |
-          # 替换谷歌字体域名 → loli 国内镜像，解决字体加载超时
+          cat > 404.html << 'EOF'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>OI Wiki</title>
+<script>
+(function(){
+  var loc = window.location;
+  var target = loc.protocol + "//" + loc.host + "/?" + loc.pathname.slice(1) + loc.search + loc.hash;
+  loc.replace(target);
+})();
+</script>
+</head>
+<body></body>
+</html>
+EOF
+
+      - name: 页面自动修复脚本
+        run: |
+          # Google Fonts → loli 国内镜像
           find . -type f -name "*.html" | xargs sed -i 's|fonts.googleapis.com|fonts.loli.net|g'
-          # 删除反馈系统JS引入，根除大量CORS报错阻塞主线程（侧边栏消失元凶）
+          # 删除反馈系统，根除大量CORS异常
           find . -type f -name "*.html" | xargs sed -i '/oiwiki-feedback-sys-frontend.js/d'
-          # 可选：移除谷歌统计（启用取消下面注释）
-          # find . -type f -name "*.html" | xargs sed -i '/www.google-analytics.com/d'
 
       - name: 提交更新
         run: |
           git add .
-          git commit -m "🔄 同步上游 OI-Wiki + 自动修复页面资源" || true
+          git commit -m "🔄 同步上游 OI Wiki｜修复页面渲染、路由、字体、跨域报错" || true
 
       - name: Push 更新
         run: |
