@@ -1,35 +1,38 @@
 name: Sync OI-Wiki Mirror
+
 on:
+  push:
+    branches: [ main ]
   schedule:
-    - cron: "0 */2 * * *"
-  workflow_dispatch:
+    # 每2小时同步一次，可自行修改
+    - cron: '0 */2 * *'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: 拉取官方OI-wiki gh-pages分支静态文件
+      - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
-          repository: OI-wiki/OI-wiki
           ref: gh-pages
-          path: source
+          fetch-depth: 0
 
-      - name: 准备目标仓库工作目录
-        uses: actions/checkout@v4
-        with:
-          path: dest
-
-      - name: 切换/创建 gh-pages 分支
+      - name: Pull latest upstream OI-Wiki
         run: |
-          cd dest
-          git checkout -B gh-pages
-          rm -rf ./*
-          cp -r ../source/* ./
-          git config user.name "Mirror Bot"
-          git config user.email "mirror@example.com"
+          git remote add upstream https://github.com/OI-wiki/OI-wiki.git
+          git fetch upstream
+          git reset --hard upstream/master
+
+      # ==========关键：自动重建CNAME==========
+      - name: Restore custom domain CNAME
+        run: echo "shturl.cc/h9A9Ft2mWyO" > CNAME
+
+      - name: Push changes to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           git add .
-          git commit -m "Sync upstream OI-wiki gh-pages" || echo "内容无更新"
-          git push origin gh-pages
+          git commit -m "Auto sync upstream & restore CNAME" || echo "No changes to commit"
+          git push origin gh-pages --force
