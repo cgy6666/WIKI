@@ -10,6 +10,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
@@ -24,9 +26,13 @@ jobs:
           git fetch upstream
           git reset --hard upstream/master
 
+      # 删除上游带过来无用的.github工作流目录，规避推送权限报错！
+      - name: Clean useless .github folder
+        run: rm -rf .github
+
       # 关键：自动重建CNAME，防止被覆盖
       - name: Restore custom domain CNAME
-        run: echo "shturl.cc/HEJA7iyY81D" > CNAME
+        run: echo "shturl.cc/h9A9Ft2mWyO" > CNAME
 
       - name: Push changes to gh-pages
         env:
