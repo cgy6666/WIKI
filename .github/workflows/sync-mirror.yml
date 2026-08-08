@@ -6,7 +6,7 @@ on:
   schedule:
     # 每2小时同步一次
     - cron: '0 */2 * * *'
-  workflow_dispatch:  # ←新增这一行，开启手动运行按钮
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -20,12 +20,13 @@ jobs:
           ref: gh-pages
           fetch-depth: 0
 
-      - name: Pull latest upstream OI-Wiki
+      - name: Pull latest upstream OI-Wiki static website
         run: |
           git remote remove upstream || true
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
-          git reset --hard upstream/master
+          # !!!!!!!!!重点：同步官方 gh-pages（编译好的完整网站）
+          git reset --hard upstream/gh-pages
 
       # 删除上游带过来无用的.github工作流目录，规避推送权限报错！
       - name: Clean useless .github folder
@@ -42,5 +43,5 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add .
-          git commit -m "Auto sync upstream & restore CNAME" || echo "No changes to commit"
+          git commit -m "Auto sync upstream static site & restore CNAME" || echo "No changes to commit"
           git push origin gh-pages --force
