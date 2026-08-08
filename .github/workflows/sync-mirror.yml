@@ -1,10 +1,9 @@
-name: Sync OI-Wiki Mirror
+name: Sync OI-Wiki Source & Static Site
 
 on:
   push:
     branches: [ main ]
   schedule:
-    # 每2小时同步一次
     - cron: '0 */2 * * *'
   workflow_dispatch:
 
@@ -14,34 +13,41 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout gh-pages branch
+      - name: Clone full repository
         uses: actions/checkout@v4
         with:
-          ref: gh-pages
           fetch-depth: 0
 
-      - name: Pull latest upstream OI-Wiki static website
+      - name: Init upstream remote
         run: |
           git remote remove upstream || true
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
-          # !!!!!!!!!重点：同步官方 gh-pages（编译好的完整网站）
+
+      # ========== 同步1：上游 gh-pages → 本地 gh-pages（网站静态页面）
+      - name: Sync upstream/gh-pages -> origin/gh-pages
+        run: |
+          git checkout gh-pages
           git reset --hard upstream/gh-pages
+          # 清理上游自带.github 规避workflow推送权限报错
+          rm -rf .github
+          # 恢复自定义域名CNAME
+          echo "shturl.cc/h9A9Ft2mWyO" > CNAME
+          git add .
+          git commit -m "Auto sync static site from upstream gh-pages" || echo "No static changes"
 
-      # 删除上游带过来无用的.github工作流目录，规避推送权限报错！
-      - name: Clean useless .github folder
-        run: rm -rf .github
+      # ========== 同步2：上游 master → 本地 source（OI-Wiki Markdown源码）
+      - name: Sync upstream/master -> origin/source
+        run: |
+          # 如果不存在source分支则新建
+          git checkout -B source upstream/master
+          git add .
+          git commit -m "Auto sync source code from upstream master" || echo "No source changes"
 
-      # 关键：自动重建CNAME，防止被覆盖
-      - name: Restore custom domain CNAME
-        run: echo "shturl.cc/h9A9Ft2mWyO" > CNAME
-
-      - name: Push changes to gh-pages
+      # 推送两个分支
+      - name: Push all synced branches
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add .
-          git commit -m "Auto sync upstream static site & restore CNAME" || echo "No changes to commit"
           git push origin gh-pages --force
+          git push origin source --force
