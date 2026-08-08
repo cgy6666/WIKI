@@ -17,19 +17,19 @@ jobs:
           ref: gh-pages
           path: source
 
-      - name: 检出本仓库gh-pages分支
+      - name: 准备目标仓库工作目录
         uses: actions/checkout@v4
         with:
           path: dest
-          branch: gh-pages
 
-      - name: 覆盖同步文件
+      - name: 切换/创建 gh-pages 分支
         run: |
-          rm -rf dest/*
-          cp -r source/* dest/
           cd dest
+          git checkout -B gh-pages
+          rm -rf ./*
+          cp -r ../source/* ./
           git config user.name "Mirror Bot"
           git config user.email "mirror@example.com"
           git add .
           git commit -m "Sync upstream OI-wiki gh-pages" || echo "内容无更新"
-          git push
+          git push origin gh-pages
