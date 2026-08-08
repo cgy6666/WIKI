@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 同步官方静态网站到 gh-pages 分支（GitHub Pages 对外访问）
   sync_website:
     runs-on: ubuntu-latest
     permissions:
@@ -17,26 +16,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 添加上游仓库
+      - name: 配置Git提交身份
+        run: |
+          git config --global user.name "Mirror Bot"
+          git config --global user.email "mirror@example.com"
+
+      - name: 添加上游OI-wiki仓库
         run: |
           git remote remove upstream || true
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
 
-      - name: 同步官方 gh-pages 静态网站
+      - name: 同步静态页面到gh-pages
         run: |
           git switch -C gh-pages upstream/gh-pages
-          # 删除上游自带的工作流目录，规避推送权限报错
           rm -rf .github
-          # 写入你的自定义域名
-          echo "shturl.cc/9NAJfXFA9RF" > CNAME
-          # 自动生成路由规则，解决子页面404
+          echo "oi-wiki.xqyhcc.qzz.io" > CNAME
           echo "/*    /index.html   200" > _redirects
           git add .
-          git commit -m "Auto sync official static site" || true
+          git commit -m "同步OI-Wiki静态站点" || true
           git push origin gh-pages --force
 
-  # 同步官方源码（master）到 source 分支备份
   sync_source_backup:
     runs-on: ubuntu-latest
     permissions:
@@ -46,15 +46,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 添加上游仓库
+      - name: 配置Git提交身份
+        run: |
+          git config --global user.name "Mirror Bot"
+          git config --global user.email "mirror@example.com"
+
+      - name: 添加上游OI-wiki仓库
         run: |
           git remote remove upstream || true
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
 
-      - name: 同步官方 master 源码到 source 分支
+      - name: 备份源码到source分支
         run: |
           git switch -C source upstream/master
+          rm -rf .github
           git add .
-          git commit -m "Auto backup source code" || true
+          git commit -m "备份OI-Wiki源码" || true
           git push origin source --force
