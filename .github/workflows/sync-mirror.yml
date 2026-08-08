@@ -1,66 +1,62 @@
-name: Sync OI-Wiki Mirror
+name: Sync OI Wiki Mirror
+
 on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 */2 * * *'
-  workflow_dispatch:
+    # 每 6 小时自动同步，可以自行修改 cron
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # 支持手动点击运行
 
 jobs:
-  sync_website:
+  sync:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout 当前仓库
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 配置Git提交身份
+      - name: 配置 Git 身份
         run: |
           git config --global user.name "Mirror Bot"
           git config --global user.email "mirror@example.com"
 
-      - name: 添加上游OI-wiki仓库
+      - name: 预先备份 CNAME 文件
         run: |
-          git remote remove upstream || true
+          if [ -f CNAME ]; then
+            cp CNAME /tmp/custom_cname_backup
+          fi
+
+      - name: 拉取上游 OI-Wiki gh-pages
+        run: |
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
-          git fetch upstream
+          git fetch upstream gh-pages
+          git reset --hard upstream/gh-pages
 
-      - name: 同步静态页面到gh-pages
+      - name: 恢复 CNAME（保证自定义域名不丢失）
         run: |
-          git switch -C gh-pages upstream/gh-pages
-          rm -rf .github
-          echo "oi-wiki.xqyhcc.qzz.io" > CNAME
-          echo "/*    /index.html   200" > _redirects
+          if [ -f /tmp/custom_cname_backup ]; then
+            cp /tmp/custom_cname_backup CNAME
+          else
+            # 如果备份不存在，主动生成你的域名CNAME
+            echo "oi-wiki.xqyhcc.qzz.io" > CNAME
+          fi
+
+      - name: 自动修复页面资源链接 & 移除报错反馈组件
+        run: |
+          # 替换谷歌字体域名 → loli 国内镜像
+          find . -type f -name "*.html" | xargs sed -i 's|fonts.googleapis.com|fonts.loli.net|g'
+          # 删除反馈系统脚本引入，消除持续CORS异常
+          find . -type f -name "*.html" | xargs sed -i '/oiwiki-feedback-sys-frontend.js/d'
+          # 可选：移除谷歌统计（取消下面注释启用）
+          # find . -type f -name "*.html" | xargs sed -i '/www.google-analytics.com/d'
+
+      - name: 提交更新
+        run: |
           git add .
-          git commit -m "同步OI-Wiki静态站点" || true
-          git push origin gh-pages --force
+          git commit -m "🔄 同步上游 OI-Wiki + 自动修复页面资源" || true
 
-  sync_source_backup:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 配置Git提交身份
+      - name: Push 更新
         run: |
-          git config --global user.name "Mirror Bot"
-          git config --global user.email "mirror@example.com"
-
-      - name: 添加上游OI-wiki仓库
-        run: |
-          git remote remove upstream || true
-          git remote add upstream https://github.com/OI-wiki/OI-wiki.git
-          git fetch upstream
-
-      - name: 备份源码到source分支
-        run: |
-          git switch -C source upstream/master
-          rm -rf .github
-          git add .
-          git commit -m "备份OI-Wiki源码" || true
-          git push origin source --force
+          git push origin HEAD:gh-pages --force
