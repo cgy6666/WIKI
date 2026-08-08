@@ -4,8 +4,8 @@ on:
   push:
     branches: [ main ]
   schedule:
-    # 每2小时同步一次，可自行修改
-    - cron: '0 */2 * *'
+    # 每2小时同步一次
+    - cron: '0 */2 * * *'
 
 jobs:
   sync:
@@ -19,13 +19,14 @@ jobs:
 
       - name: Pull latest upstream OI-Wiki
         run: |
+          git remote remove upstream || true
           git remote add upstream https://github.com/OI-wiki/OI-wiki.git
           git fetch upstream
           git reset --hard upstream/master
 
-      # ==========关键：自动重建CNAME==========
+      # 关键：自动重建CNAME，防止被覆盖
       - name: Restore custom domain CNAME
-        run: echo "shturl.cc/h9A9Ft2mWyO" > CNAME
+        run: echo "shturl.cc/HEJA7iyY81D" > CNAME
 
       - name: Push changes to gh-pages
         env:
